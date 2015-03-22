@@ -11,17 +11,17 @@ var app = angular.module('tutorialWebApp', [
  */
 app.config(['$routeProvider', function ($routeProvider) {
   $routeProvider
-    // Home
     .when("/", {templateUrl: "partials/home.html", controller: "PageCtrl"})
     .when("/redirect", {templateUrl: "partials/home.html", controller: "RedirectCtrl"})
-    // else 404
-    .otherwise("/404", {templateUrl: "partials/404.html", controller: "PageCtrl"});
+    .otherwise("/", {templateUrl: "partials/home.html", controller: "PageCtrl"});
 }]);
 
 /**
  * Controls all other Pages
  */
 app.controller('PageCtrl', function ($scope, $location, $http, $log, $window) {
+
+  $scope.articles = [];
 
   var consumer_key = '39239-0b722d6f64189f7ea3440174';
 
@@ -52,13 +52,34 @@ app.controller('PageCtrl', function ($scope, $location, $http, $log, $window) {
         access_token: window.localStorage.getItem('access_token'),
         state: 'all',
         detailType: 'complete',
-        sort: 'site'//,
-        //tag: 'list',
-        //favorite: '1'
+        sort: 'site',
+        tag: 'list'
       }).
       success(function(data, status, headers, config) {
-        $log.info('Received articles: ' + data);
+        $log.info('Received articles: ' + data.list);
 
+        var list = [];
+        for (var k in data.list) {
+          if (data.list.hasOwnProperty(k)) {
+            var item = data.list[k];
+            item.sortKey = null;
+
+            for (var t in item.tags) {
+              if (item.tags.hasOwnProperty(t) && t !== 'list') {
+                item.sortKey = t;
+              }
+            }
+
+            list.push(item);
+          }
+        }
+
+        // TODO: Sort by tag (excluding list) -- groupings :)
+        // e.g. Cloud, Node, JavaScript, etc...
+
+        angular.copy(list, $scope.articles);
+
+        $log.log($scope.articles);
       }).
       error(function(data, status, headers, config) {
         $log.error('Oops error gettings your Pocket articles');
@@ -88,3 +109,47 @@ app.controller('RedirectCtrl', function ($scope, $location, $http, $log, $window
 
 });
 
+app.directive('editInPlace', function () {
+    return {
+        restrict: 'E',
+        scope: {
+            value: '='
+        },
+        template: '<span ng-click="edit()" ng-bind="value"></span><input ng-model="value"></input>',
+        link: function ($scope, element, attrs) {
+
+            // Let's get a reference to the input element, as we'll want to reference it.
+            var inputElement = angular.element(element.children()[1]);
+
+            // This directive should have a set class so we can style it.
+            element.addClass('edit-in-place');
+
+            // Initially, we're not editing.
+            $scope.editing = false;
+
+            // ng-click handler to activate edit-in-place
+            $scope.edit = function () {
+                $scope.editing = true;
+
+                // We control display through a class on the directive itself. See the CSS.
+                element.addClass('active');
+
+                // And we must focus the element.
+                // `angular.element()` provides a chainable array, like jQuery so to access a native DOM function,
+                // we have to reference the first element in the array.
+                inputElement[0].focus();
+            };
+
+            element.children().bind('blur', function() {
+               $scope.editing = false;
+               element.removeClass('active');
+            });
+
+            // When we leave the input, we're done editing.
+            //inputElement.prop('onblur', function () {
+            //    $scope.editing = false;
+            //    element.removeClass('active');
+            //});
+        }
+    };
+});
