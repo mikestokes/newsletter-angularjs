@@ -32,7 +32,7 @@ app.config(['$routeProvider', function ($routeProvider) {
  * Controls all other Pages
  */
 app.controller('PageCtrl', function ($scope, $location, $http, $log) {
-alert(document.referrer);
+
   $scope.signin = function () {  
     $http.post('https://hotlunch.azure-mobile.net/api/pocket/', { consumer_key:'39239-0b722d6f64189f7ea3440174' }).
       success(function(data, status, headers, config) {
